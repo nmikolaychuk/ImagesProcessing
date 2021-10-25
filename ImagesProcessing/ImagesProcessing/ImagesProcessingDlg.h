@@ -1,8 +1,6 @@
-﻿
-// ImagesProcessingDlg.h: файл заголовка
-//
-
-#pragma once
+﻿#pragma once
+#include <iostream>
+#include "panel_logic.h"
 
 
 // Диалоговое окно CImagesProcessingDlg
@@ -25,6 +23,19 @@ public:
 protected:
 	HICON m_hIcon;
 
+	// Переменные, связываемые с окном исходного изображения.
+	CWnd* PicWnd;
+	CDC* PicDc;
+	CRect Pic;
+
+	// Переменные, связываемые с окном для зашумленного изображения.
+	CWnd* NoiseWnd;
+	CDC* NoiseDc;
+	CRect Noise;
+
+	// Глобальные объекты для обращения из интерфейса.
+	Image* image;
+
 	// Созданные функции схемы сообщений
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
@@ -32,5 +43,13 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 public:
-
+	afx_msg void OnBnClickedButtonDrawInput();
+	afx_msg void OnBnClickedButtonClearInput();
+	int IMAGE_WIDTH;
+	int IMAGE_HEIGHT;
+	CButton RADIO_IS_MODEL;
+	CButton RADIO_IS_PICTURE;
+	double NOISE_PERCENT;
+	afx_msg void OnBnClickedButtonDrawInputWithNoise();
+	afx_msg void OnBnClickedButtonClearInputWithNoise();
 };
