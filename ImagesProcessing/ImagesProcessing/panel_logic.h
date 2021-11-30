@@ -13,6 +13,9 @@ class Complex {
 public:
 	double re;
 	double im;
+	double mod;
+
+	void get_module_value();
 };
 
 
@@ -27,8 +30,6 @@ color_value - значение пикселя (экранное, цвет).
 */
 class Pixel {
 public:
-	double x;
-	double y;
 	Complex value;
 	int color_value;
 
@@ -40,11 +41,9 @@ public:
 	/**
 	Конструктор с тремя параметрами.
 
-	@param in_x: Координата "x" пикселя.
-	@param in_y: Координата "y" пикселя.
 	@param in_value: Значение пикселя.
 	*/
-	Pixel(double in_x, double in_y, double in_value);
+	Pixel(double in_value);
 
 	/**
 	Перевод значения пикселя в цвет.
@@ -53,14 +52,14 @@ public:
 	@param max_value: Максимальное значение пикселя в изображении.
 	@return Значение цвета [0-255].
 	*/
-	int get_color_from_value(double min_value, double max_value);
+	int get_color_from_value(double min_value, double max_value, bool is_module);
 
 	/**
 	Вычисление модуля комплексного числа.
 
-	@return Модуль числа.
+	@return None
 	*/
-	double calc_module_of_cmplx();
+	void calc_module_of_cmplx();
 };
 
 
@@ -78,6 +77,11 @@ public:
 	// Пересчет координат.
 	double xmin, xmax, ymin, ymax;
 	double xp, yp;
+	bool circle_window;
+	bool rect_window;
+	int filtration_percent;
+	double step_x;
+	double step_y;
 
 	/**
 	Конструктор по умолчанию.
@@ -87,7 +91,8 @@ public:
 	/**
 	Конструктор с инициализацией параметров.
 	*/
-	DrawSettings(CWnd* pic_wnd, CDC* pic_dc, CRect pic, double n_xmax, double n_ymax);
+	DrawSettings(CWnd* pic_wnd, CDC* pic_dc, CRect pic, double n_xmax, double n_ymax,
+				 bool is_crcl_wnd, bool is_rct_wnd, int filtration_percent);
 
 	/**
 	Перевод мировых координат в экранные.
@@ -102,17 +107,26 @@ public:
 class Image {
 private:
 	bool _is_model_image;
+	bool _is_zeros_addition;
 
 public:
 	int image_width;
 	int image_height;
 
-	vector<Pixel> input_image;
-	vector<Pixel> noise_image;
-	vector<Pixel> spectrum_image;
-	vector<Pixel> filtered_image;
+	int window_offset_x;
+	int window_offset_y;
+	int circle_radius;
+
+	vector<vector<Pixel>> input_image;
+	vector<vector<Pixel>> noise_image;
+	vector<vector<Pixel>> spectrum_image_calc;
+	vector<vector<Pixel>> spectrum_image_vis;
+	vector<vector<vector<Pixel>>> inverted_spectrum_quanters;
+	vector<vector<Pixel>> filtered_image;
 	DrawSettings ds_input;
 	DrawSettings ds_noise;
+	DrawSettings ds_spec;
+	DrawSettings ds_filtered;
 
 	// Конструктор по умолчанию.
 	Image();
@@ -128,7 +142,8 @@ public:
 	@param ds_noise: Параметры рисования для зашумленного изображения.
 	@return None
 	*/
-	Image(bool is_model, int width, int height, DrawSettings ds_in, DrawSettings ds_noi);
+	Image(bool is_model, bool _is_zeros_addition, int width, int height, DrawSettings ds_in,
+		  DrawSettings ds_noi, DrawSettings ds_sp, DrawSettings ds_ft);
 
 	/**
 	Обновление состояния (параметров) объекта.
@@ -140,7 +155,7 @@ public:
 	@param height: Высота изображения.
 	@return None
 	*/
-	void update_image_condition(bool is_model, int width, int height);
+	void update_image_condition(bool is_model, bool is_zeros_add, int width, int height);
 
 	/**
 	Генерация изображения в виде суммы Гауссовых куполов.
@@ -160,37 +175,42 @@ public:
 	/**
 	Вычисление спектра изображения.
 
-	@return Спектр изображения.
+	@return None
 	*/
-	vector<Pixel> get_spectrum_image();
+	void get_spectrum_image();
 
 	/**
 	Фильтрация изображения.
 
-	@return Отфильтрованное изображение.
+	@return None
 	*/
-	vector<Pixel> get_filtered_image();
+	void get_filtered_image();
+
+	/**
+	Линейная интерполяция вектора.
+	*/
+	vector<Pixel> vector_interpolation(vector<Pixel> vec, int new_size, bool is_width);
 
 	/**
 	Доопределение исходного изображения до размера степени двойки.
 
-	@return Доопределенное изображение.
+	@return None
 	*/
-	vector<Pixel> get_addition_input_image();
+	void get_addition_image();
 
 	/**
 	Отрисовка изображения.
 	
 	@return None
 	*/
-	void draw_image(vector<Pixel> image, DrawSettings ds);
+	void draw_image(vector<vector<Pixel>> image, DrawSettings ds, bool draw_window);
 
 	/**
 	Вычисление цвета по значениям изображения.
 
 	@return Изображение с вычесленными цветами.
 	*/
-	vector<Pixel> calculate_color_of_image(vector<Pixel> image_vec);
+	vector<vector<Pixel>> calculate_color_of_image(vector<vector<Pixel>> image_vec, bool is_module);
 
 	/**
 	Очистка выбранного изображения.
@@ -198,5 +218,20 @@ public:
 	@param image_vec: Вектор пикселей выбранного изображения для очистки.
 	@return Очищенный массив.
 	*/
-	vector<Pixel> clear_selected_image(vector<Pixel> image_vec);
+	vector<vector<Pixel>> clear_selected_image(vector<vector<Pixel>> image_vec);
+
+	/**
+	Вычисление невязки для исходного и восстановленного сигнала.
+
+	@return Невязка.
+	*/
+	double calculate_difference();
+
+	/**
+	Вычислений модулей каждой точки в переданном изображении.
+	
+	@param data: Изображение.
+	@return None
+	*/
+	void calculate_modules(vector<vector<Pixel>>& data);
 };
